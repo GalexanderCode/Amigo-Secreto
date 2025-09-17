@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigo Secreto - Sorteo Electrónico</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ff6b6b;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .participants-list {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .participant-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-in;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .participant-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .participant-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .participant-city {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .results {
+            background: #e8f5e8;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .gift-pair {
+            font-size: 1.3em;
+            color: #333;
+        }
+
+        .giver {
+            font-weight: bold;
+            color: #27ae60;
+            font-size: 1.1em;
+        }
+
+        .receiver {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 1.2em;
+        }
+
+        .admin-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .warning {
+            color: #856404;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #fadbd8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .success {
+            color: #27ae60;
+            background: #d5f4e6;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .info {
+            color: #3498db;
+            background: #ebf3fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .game-status {
+            text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .status-waiting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-drawn {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+
+        .my-result {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .my-result h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .my-result .receiver {
+            font-size: 2em;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 2s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        .setup-section {
+            background: #e8f5e8;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .config-input {
+            background: #fff;
+            border: 2px solid #27ae60;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            margin: 10px auto;
+            font-family: monospace;
+            font-size: 14px;
+            display: block;
+        }
+
+        .step-list {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .step-list h4 {
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+
+        .step-list ol {
+            margin-left: 20px;
+        }
+
+        .step-list li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎁 Amigo Secreto</h1>
+            <p>Intercambio de regalos sincronizado en tiempo real</p>
+        </div>
+
+        <div class="content">
+            <!-- Configuración inicial de Supabase -->
+            <div id="supabase-setup" class="setup-section">
+                <h2>🚀 Configuración Súper Fácil</h2>
+                <p><strong>¡Solo necesitas hacer esto UNA vez y es GRATIS!</strong></p>
+                <p>Usaremos Supabase (como Firebase pero sin tarjeta de crédito):</p>
+                
+                <div class="step-list">
+                    <h4>🔧 Pasos (5 minutos):</h4>
+                    <ol>
+                        <li><strong>Ve a:</strong> <a href="https://supabase.com" target="_blank">supabase.com</a></li>
+                        <li><strong>Click "Start your project"</strong> → Sign up with GitHub/Google</li>
+                        <li><strong>New Project:</strong>
+                            <ul>
+                                <li>Name: "amigo-secreto"</li>
+                                <li>Password: (cualquiera que recuerdes)</li>
+                                <li>Region: South America (más cerca)</li>
+                            </ul>
+                        </li>
+                        <li><strong>Espera 2 minutos</strong> (se crea automáticamente)</li>
+                        <li><strong>Ve a Settings</strong> → API</li>
+                        <li><strong>Copia:</strong> "URL" y "anon public" key</li>
+                    </ol>
+                </div>
+
+                <div class="form-group">
+                    <label for="supabase-url">🌐 URL del Proyecto:</label>
+                    <input type="url" id="supabase-url" placeholder="https://tu-proyecto.supabase.co" class="config-input">
+                </div>
+
+                <div class="form-group">
+                    <label for="supabase-key">🔑 API Key (anon/public):</label>
+                    <textarea id="supabase-key" rows="3" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="config-input"></textarea>
+                </div>
+                
+                <button class="btn" onclick="setupSupabase()">🚀 Conectar Supabase</button>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                    <strong>💡 ¿Problemas?</strong> <a href="#" onclick="showDetailedInstructions()">Ver guía detallada</a>
+                </div>
+            </div>
+
+            <!-- Instrucciones detalladas -->
+            <div id="detailed-instructions" style="display: none;" class="setup-section">
+                <h3>📖 Guía Paso a Paso con Capturas</h3>
+                <div class="step-list">
+                    <h4>1. Crear cuenta (gratis):</h4>
+                    <ul>
+                        <li>Ve a <a href="https://supabase.com" target="_blank">supabase.com</a></li>
+                        <li>Click "Start your project"</li>
+                        <li>Sign up con GitHub, Google, o email</li>
+                    </ul>
+
+                    <h4>2. Crear proyecto:</h4>
+                    <ul>
+                        <li>Click "New project"</li>
+                        <li><strong>Organization:</strong> tu usuario (aparece automático)</li>
+                        <li><strong>Name:</strong> "amigo-secreto"</li>
+                        <li><strong>Database Password:</strong> inventa una contraseña</li>
+                        <li><strong>Region:</strong> "South America (São Paulo)" (más cerca de ti)</li>
+                        <li>Click "Create new project"</li>
+                        <li><strong>¡Espera 1-2 minutos!</strong> (se crea la base de datos)</li>
+                    </ul>
+
+                    <h4>3. Obtener las credenciales:</h4>
+                    <ul>
+                        <li>En tu proyecto, click "Settings" (menú lateral)</li>
+                        <li>Click "API" (en el submenú de Settings)</li>
+                        <li><strong>Copia la "URL"</strong> (algo como: https://abcd123.supabase.co)</li>
+                        <li><strong>Copia la "anon public" key</strong> (texto largo que empieza con "eyJ...")</li>
+                    </ul>
+
+                    <h4>4. Crear las tablas:</h4>
+                    <ul>
+                        <li>Ve a "Table Editor" en el menú lateral</li>
+                        <li>Las tablas se crearán automáticamente cuando uses la app</li>
+                    </ul>
+                </div>
+                <button class="btn btn-secondary" onclick="hideDetailedInstructions()">Ocultar guía</button>
+            </div>
+
+            <!-- Aplicación principal -->
+            <div id="main-app" style="display: none;">
+                <!-- Tabs de navegación -->
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab('participant')">👤 Participante</button>
+                    <button class="tab" onclick="showTab('admin')">⚙️ Administrador</button>
+                </div>
+
+                <!-- Tab de Participante -->
+                <div id="participant-tab" class="tab-content active">
+                    <!-- Estado del juego -->
+                    <div id="game-status" class="game-status status-waiting">
+                        <div class="loading">Cargando estado del juego</div>
+                    </div>
+
+                    <!-- Registro de participante -->
+                    <div class="section" id="registration-section">
+                        <h2>📝 Únete al Intercambio</h2>
+                        <form id="participant-form">
+                            <div class="form-group">
+                                <label for="name">Tu nombre completo:</label>
+                                <input type="text" id="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Tu correo electrónico:</label>
+                                <input type="email" id="email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="city">Tu ciudad:</label>
+                                <input type="text" id="city" required>
+                            </div>
+                            <button type="submit" class="btn">Unirse al Intercambio</button>
+                        </form>
+                    </div>
+
+                    <!-- Verificar resultado -->
+                    <div class="section">
+                        <h2>🔍 Ver Mi Resultado</h2>
+                        <p>Si ya se realizó el sorteo, ingresa tu email para ver a quién le debes regalar:</p>
+                        <div class="form-group">
+                            <label for="check-email">Tu correo electrónico:</label>
+                            <input type="email" id="check-email">
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="checkMyResult()">
+                            Ver Mi Asignación
+                        </button>
+                    </div>
+
+                    <!-- Mi resultado -->
+                    <div id="my-result-section" style="display: none;">
+                        <div class="my-result">
+                            <h3>🎉 ¡Tu Amigo Secreto es:</h3>
+                            <div class="receiver" id="my-receiver"></div>
+                            <div id="receiver-city" style="margin-top: 10px; font-size: 1.1em;"></div>
+                            <p style="margin-top: 20px; opacity: 0.9;">¡Que disfrutes eligiendo el regalo perfecto! 🎁</p>
+                        </div>
+                    </div>
+
+                    <!-- Lista de participantes -->
+                    <div class="participants-list">
+                        <h3>👥 Participantes Registrados (<span id="participant-count">0</span>):</h3>
+                        <div id="participants-container">
+                            <div class="loading">Cargando participantes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab de Administrador -->
+                <div id="admin-tab" class="tab-content">
+                    <div class="admin-section">
+                        <div class="warning">
+                            ⚠️ PANEL DE ADMINISTRACIÓN ⚠️
+                        </div>
+                        <p style="text-align: center; margin-bottom: 20px;">
+                            Solo el organizador debe usar esta sección.
+                        </p>
+
+                        <div style="text-align: center;">
+                            <button class="btn" id="draw-btn" onclick="performDraw()">
+                                🎲 Realizar Sorteo
+                            </button>
+                            <button class="btn btn-danger" onclick="resetGame()">
+                                🔄 Reiniciar Todo
+                            </button>
+                        </div>
+
+                        <!-- Resultados completos (solo admin) -->
+                        <div id="admin-results" style="display: none;">
+                            <h3>📋 Resultados Completos:</h3>
+                            <div class="results" id="admin-results-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensajes de estado -->
+            <div id="status-messages"></div>
+        </div>
+    </div>
+
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        let supabase;
+        let participants = [];
+        let drawResults = [];
+        let gameState = 'registration';
+        let supabaseConfigured = false;
+        let realtimeSubscription = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSupabaseConfig();
+        });
+
+        function checkSupabaseConfig() {
+            const savedConfig = localStorage.getItem('supabaseConfigured');
+            if (savedConfig) {
+                try {
+                    const config = JSON.parse(savedConfig);
+                    initializeSupabase(config.url, config.key);
+                } catch (e) {
+                    console.error('Error loading Supabase config:', e);
+                }
+            }
+        }
+
+        function showDetailedInstructions() {
+            document.getElementById('detailed-instructions').style.display = 'block';
+        }
+
+        function hideDetailedInstructions() {
+            document.getElementById('detailed-instructions').style.display = 'none';
+        }
+
+        function setupSupabase() {
+            const url = document.getElementById('supabase-url').value.trim();
+            const key = document.getElementById('supabase-key').value.trim();
+            
+            if (!url || !key) {
+                showMessage('Por favor completa la URL y la API Key de Supabase.', 'error');
+                return;
+            }
+
+            if (!url.includes('supabase.co')) {
+                showMessage('La URL debe ser de Supabase (contener supabase.co).', 'error');
+                return;
+            }
+
+            try {
+                localStorage.setItem('supabaseConfigured', JSON.stringify({ url, key }));
+                initializeSupabase(url, key);
+                showMessage('¡Supabase configurado exitosamente!', 'success');
+            } catch (e) {
+                showMessage('Error en la configuración: ' + e.message, 'error');
+            }
+        }
+
+        async function initializeSupabase(url, key) {
+            try {
+                supabase = window.supabase.createClient(url, key);
+                supabaseConfigured = true;
+                
+                // Crear tablas si no existen
+                await createTablesIfNotExist();
+                
+                document.getElementById('supabase-setup').style.display = 'none';
+                document.getElementById('detailed-instructions').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                
+                setupEventListeners();
+                await loadInitialData();
+                startRealtimeListeners();
+                
+            } catch (e) {
+                showMessage('Error conectando con Supabase: ' + e.message, 'error');
+                console.error('Supabase initialization error:', e);
+            }
+        }
+
+        async function createTablesIfNotExist() {
+            try {
+                // Intentar crear tabla de participantes
+                await supabase.rpc('create_participants_table', {});
+            } catch (e) {
+                // Las tablas se crearán automáticamente al hacer el primer insert
+                console.log('Tables will be created automatically');
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('participant-form').addEventListener('submit', handleFormSubmit);
+        }
+
+        async function loadInitialData() {
+            try {
+                // Cargar participantes
+                const { data: participantsData, error: participantsError } = await supabase
+                    .from('participants')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+
+                if (participantsError && participantsError.code !== 'PGRST116') {
+                    throw participantsError;
+                }
+
+                participants = participantsData || [];
+
+                // Cargar estado del juego
+                const { data: gameData, error: gameError } = await supabase
+                    .from('game_state')
+                    .select('*')
+                    .eq('id', 'current')
+                    .single();
+
+                if (gameError && gameError.code !== 'PGRST116') {
+                    if (gameError.code !== 'PGRST204') { // Not found is OK
+                        throw gameError;
+                    }
+                }
+
+                if (gameData) {
+                    gameState = gameData.state || 'registration';
+                    drawResults = gameData.results || [];
+                }
+
+                updateUI();
+            } catch (e) {
+                console.error('Error loading initial data:', e);
+                updateUI(); // Show UI even if there's an error
+            }
+        }
+
+        function startRealtimeListeners() {
+            // Escuchar cambios en participantes
+            supabase
+                .channel('participants')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'participants' },
+                    (payload) => {
+                        loadInitialData(); // Reload data when changes occur
+                    }
+                )
+                .subscribe();
+
+            // Escuchar cambios en estado del juego
+            supabase
+                .channel('game_state')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'game_state' },
+                    (payload) => {
+                        loadInitialData();
+                    }
+                )
+                .subscribe();
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            if (gameState === 'drawn') {
+                showMessage('No se pueden agregar más participantes después del sorteo.', 'error');
+                return;
+            }
+
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const city = document.getElementById('city').value.trim();
+
+            if (!name || !email || !city) {
+                showMessage('Por favor, completa todos los campos.', 'error');
+                return;
+            }
+
+            try {
+                // Verificar si el email ya existe
+                const { data: existing, error: checkError } = await supabase
+                    .from('participants')
+                    .select('id')
+                    .eq('email', email.toLowerCase())
+                    .single();
+
+                if (existing) {
+                    showMessage('Este correo electrónico ya está registrado.', 'error');
+                    return;
+                }
+
+                // Agregar participante
+                const { data, error } = await supabase
+                    .from('participants')
+                    .insert([{
+                        name: name,
+                        email: email.toLowerCase(),
+                        city: city
+                    }]);
+
+                if (error) throw error;
+
+                // Limpiar formulario
+                document.getElementById('participant-form').reset();
+                showMessage(`¡${name} se ha unido al intercambio exitosamente!`, 'success');
+
+            } catch (error) {
+                showMessage('Error al registrar participante: ' + error.message, 'error');
+                console.error('Error adding participant:', error);
+            }
+        }
+
+        function updateUI() {
+            updateParticipantsList();
+            updateGameStatus();
+            updateAdminSection();
+        }
+
+        function updateParticipantsList() {
+            const container = document.getElementById('participants-container');
+            const count = document.getElementById('participant-count');
+            
+            count.textContent = participants.length;
+
+            if (participants.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Aún no hay participantes registrados.</p>';
+                return;
+            }
+
+            container.innerHTML = participants.map(participant => `
+                <div class="participant-item">
+                    <div class="participant-info">
+                        <div class="participant-name">${participant.name}</div>
+                        <div class="participant-city">📍 ${participant.city}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateGameStatus() {
+            const statusDiv = document.getElementById('game-status');
+            
+            if (gameState === 'drawn') {
+                statusDiv.className = 'game-status status-drawn';
+                statusDiv.innerHTML = '✅ ¡Sorteo realizado! Verifica tu resultado abajo.';
+            } else {
+                statusDiv.className = 'game-status status-waiting';
+                statusDiv.innerHTML = `🎲 Esperando sorteo... (${participants.length} participantes registrados)`;
+            }
+        }
+
+        async function checkMyResult() {
+            const email = document.getElementById('check-email').value.trim().toLowerCase();
+            
+            if (!email) {
+                showMessage('Por favor ingresa tu correo electrónico.', 'error');
+                return;
+            }
+
+            if (gameState !== 'drawn') {
+                showMessage('El sorteo aún no se ha realizado.', 'info');
+                return;
+            }
+
+            const myResult = drawResults.find(result => 
+                result.giverEmail.toLowerCase() === email
+            );
+
+            if (!myResult) {
+                showMessage('No se encontró tu participación en el sorteo.', 'error');
+                return;
+            }
+
+            // Mostrar mi resultado
+            document.getElementById('my-receiver').textContent = myResult.receiver;
+            document.getElementById('receiver-city').textContent = `📍 ${myResult.receiverCity}`;
+            document.getElementById('my-result-section').style.display = 'block';
+            
+            showMessage('¡Resultado encontrado!', 'success');
+        }
+
+        function updateAdminSection() {
+            const drawBtn = document.getElementById('draw-btn');
+            
+            if (participants.length >= 3) {
+                drawBtn.disabled = gameState === 'drawn';
+                drawBtn.textContent = gameState === 'drawn' ? '✅ Sorteo Realizado' : '🎲 Realizar Sorteo';
+            } else {
+                drawBtn.disabled = true;
+                drawBtn.textContent = `🎲 Se necesitan al menos 3 participantes (${participants.length}/3)`;
+            }
+        }
+
+        async function performDraw() {
+            if (participants.length < 3) {
+                showMessage('Se necesitan al menos 3 participantes para realizar el sorteo.', 'error');
+                return;
+            }
+
+            if (gameState === 'drawn') {
+                showMessage('El sorteo ya fue realizado.', 'error');
+                return;
+            }
+
+            if (!confirm('¿Estás seguro de realizar el sorteo? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                // Algoritmo de sorteo
+                const shuffled = [...participants];
+                let attempts = 0;
+                let validDraw = false;
+
+                while (!validDraw && attempts < 1000) {
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+
+                    validDraw = true;
+                    for (let i = 0; i < participants.length; i++) {
+                        if (participants[i].id === shuffled[i].id) {
+                            validDraw = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+
+                if (!validDraw) {
+                    showMessage('Error al realizar el sorteo. Por favor, inténtalo de nuevo.', 'error');
+                    return;
+                }
+
+                // Crear resultados
+                const results = participants.map((giver, index) => ({
+                    giver: giver.name,
+                    giverEmail: giver.email,
+                    receiver: shuffled[index].name,
+                    receiverCity: shuffled[index].city
+                }));
+
+                // Guardar en Supabase
+                const { data, error } = await supabase
+                    .from('game_state')
+                    .upsert([{
+                        id: 'current',
+                        state: 'drawn',
+                        results: results
+                    }]);
+
+                if (error) throw error;
+
+                gameState = 'drawn';
+                drawResults = results;
+                updateUI();
+                showAdminResults(results);
+                showMessage('¡Sorteo realizado exitosamente!', 'success');
+
+            } catch (error) {
+                showMessage('Error al realizar el sorteo: ' + error.message, 'error');
+                console.error('Error performing draw:', error);
+            }
+        }
+
+        function showAdminResults(results = drawResults) {
+            const container = document.getElementById('admin-results-container');
+            container.innerHTML = results.map(result => `
+                <div class="result-item">
+                    <div class="gift-pair">
+                        <span class="giver">${result.giver}</span> 
+                        → regala a → 
+                        <span class="receiver">${result.receiver}</span>
+                        <div style="font-size: 0.9em; margin-top: 5px; color: #666;">
+                            📧 ${result.giverEmail} | 📍 ${result.receiverCity}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('admin-results').style.display = 'block';
+        }
+
+        async function resetGame() {
+            if (!confirm('¿Estás seguro de que quieres reiniciar todo el juego? Se eliminarán todos los participantes y resultados.')) {
+                return;
+            }
+
+            try {
+                // Eliminar todos los participantes
+                const { error: deleteParticipantsError } = await supabase
+                    .from('participants')
+                    .delete()
+                    .neq('id', 0); // Delete all (neq 0 means not equal to 0, so all records)
+
+                if (deleteParticipantsError) throw deleteParticipantsError;
+
+                // Eliminar estado del juego
+                const { error: deleteGameError } = await supabase
+                    .from('game_state')
+                    .delete()
+                    .eq('id', 'current');
+
+                if (deleteGameError) throw deleteGameError;
+
+                // Reset local state
+                participants = [];
+                drawResults = [];
+                gameState = 'registration';
+                
+                updateUI();
+                document.getElementById('admin-results').style.display = 'none';
+                document.getElementById('my-result-section').style.display = 'none';
+                showMessage('Juego reiniciado exitosamente.', 'success');
+
+            } catch (error) {
+                showMessage('Error al reiniciar el juego: ' + error.message, 'error');
+                console.error('Error resetting game:', error);
+            }
+        }
+
+        function showTab(tabName) {
+            // Ocultar todos los tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Mostrar tab seleccionado
+            document.getElementById(tabName + '-tab').classList.add('active');
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+        }
+
+        function showMessage(message, type) {
+            const container = document.getElementById('status-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            
+            container.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
