@@ -563,17 +563,6 @@
         }
 
         async function createTablesIfNeeded() {
-            // La tabla participants
-            const { error: participantsError } = await supabase.rpc('create_participants_table');
-            // La tabla game_settings
-            const { error: settingsError } = await supabase.rpc('create_game_settings_table');
-            // La tabla draw_results
-            const { error: resultsError } = await supabase.rpc('create_draw_results_table');
-
-            // Si las funciones RPC no existen, las tablas se crearán automáticamente al insertar datos
-        }
-
-        async function loadGameData() {
             try {
                 // Cargar participantes
                 const { data: participantsData, error: participantsError } = await supabase
