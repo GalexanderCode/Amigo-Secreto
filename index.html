@@ -387,7 +387,7 @@
             <!-- Loading inicial -->
             <div id="loading" class="loading">
                 <div class="spinner"></div>
-                <p>Conectando con la base de datos...</p>
+                <p>Inicializando aplicación...</p>
             </div>
 
             <!-- Contenido principal -->
@@ -452,10 +452,7 @@
                     <div class="participants-list">
                         <h3>👥 Participantes Registrados (<span id="participant-count">0</span>):</h3>
                         <div id="participants-container">
-                            <div class="loading">
-                                <div class="spinner"></div>
-                                <p>Cargando participantes...</p>
-                            </div>
+                            <p style="text-align: center; color: #666;">Cargando participantes...</p>
                         </div>
                     </div>
                 </div>
@@ -534,56 +531,135 @@
 
         // Inicializar aplicación
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Iniciando aplicación...');
+            
             try {
-                await initializeApp();
+                await loadGameData();
                 setupEventListeners();
                 startRealtimeSubscription();
+                
                 document.getElementById('connection-status').textContent = '🟢 Conectado';
                 document.getElementById('connection-status').className = 'connection-status connected';
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                
+                updateUI();
+
             } catch (error) {
                 console.error('Error initializing app:', error);
-                showMessage('Error de conexión. Por favor recarga la página.', 'error');
                 document.getElementById('connection-status').textContent = '🔴 Error de conexión';
                 document.getElementById('connection-status').className = 'connection-status disconnected';
+                
+                document.getElementById('loading').innerHTML = `
+                    <div class="error">
+                        <h3>⚠️ Error de Conexión</h3>
+                        <p>No se pudo conectar con la base de datos.</p>
+                        <p>Verifica tu configuración de Supabase y recarga la página.</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">Error: ${error.message}</p>
+                    </div>
+                `;
             }
         });
 
-        async function initializeApp() {
-            // Crear tablas si no existen
-            await createTablesIfNeeded();
+        function showSetupInstructions() {
+            document.getElementById('loading').innerHTML = `
+                <div class="error">
+                    <h3>⚠️ Configuración Requerida</h3>
+                    <p><strong>Las tablas de la base de datos no están configuradas.</strong></p>
+                    <p>Para usar esta aplicación, necesitas crear las siguientes tablas en tu base de datos Supabase:</p>
+                    <br>
+                    <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px;">
+                        <strong>1. Tabla: participants</strong><br>
+                        CREATE TABLE participants (<br>
+                        &nbsp;&nbsp;id BIGSERIAL PRIMARY KEY,<br>
+                        &nbsp;&nbsp;name TEXT NOT NULL,<br>
+                        &nbsp;&nbsp;email TEXT NOT NULL UNIQUE,<br>
+                        &nbsp;&nbsp;city TEXT NOT NULL,<br>
+                        &nbsp;&nbsp;created_at TIMESTAMPTZ DEFAULT NOW()<br>
+                        );<br><br>
+                        
+                        <strong>2. Tabla: game_settings</strong><br>
+                        CREATE TABLE game_settings (<br>
+                        &nbsp;&nbsp;id INTEGER PRIMARY KEY DEFAULT 1,<br>
+                        &nbsp;&nbsp;admin_code TEXT,<br>
+                        &nbsp;&nbsp;game_state TEXT DEFAULT 'registration',<br>
+                        &nbsp;&nbsp;updated_at TIMESTAMPTZ DEFAULT NOW()<br>
+                        );<br><br>
+                        
+                        <strong>3. Tabla: draw_results</strong><br>
+                        CREATE TABLE draw_results (<br>
+                        &nbsp;&nbsp;id BIGSERIAL PRIMARY KEY,<br>
+                        &nbsp;&nbsp;giver_name TEXT NOT NULL,<br>
+                        &nbsp;&nbsp;giver_email TEXT NOT NULL,<br>
+                        &nbsp;&nbsp;receiver_name TEXT NOT NULL,<br>
+                        &nbsp;&nbsp;receiver_city TEXT NOT NULL,<br>
+                        &nbsp;&nbsp;created_at TIMESTAMPTZ DEFAULT NOW()<br>
+                        );<br><br>
+                        
+                        <strong>4. Habilitar Row Level Security (RLS):</strong><br>
+                        ALTER TABLE participants ENABLE ROW LEVEL SECURITY;<br>
+                        ALTER TABLE game_settings ENABLE ROW LEVEL SECURITY;<br>
+                        ALTER TABLE draw_results ENABLE ROW LEVEL SECURITY;<br><br>
+                        
+                        <strong>5. Crear políticas (permite acceso público):</strong><br>
+                        CREATE POLICY "Allow all operations" ON participants FOR ALL USING (true);<br>
+                        CREATE POLICY "Allow all operations" ON game_settings FOR ALL USING (true);<br>
+                        CREATE POLICY "Allow all operations" ON draw_results FOR ALL USING (true);
+                    </div>
+                    <br>
+                    <p><strong>Instrucciones:</strong></p>
+                    <ol style="text-align: left;">
+                        <li>Ve al panel de Supabase → SQL Editor</li>
+                        <li>Copia y pega cada comando SQL</li>
+                        <li>Ejecuta los comandos uno por uno</li>
+                        <li>Recarga esta página</li>
+                    </ol>
+                </div>
+            `;
             
-            // Cargar datos iniciales
-            await loadGameData();
-            
-            // Mostrar contenido
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            
-            updateUI();
+            document.getElementById('connection-status').textContent = '🔴 Configuración requerida';
+            document.getElementById('connection-status').className = 'connection-status disconnected';
         }
 
-        async function createTablesIfNeeded() {
+        async function loadGameData() {
             try {
+                console.log('Cargando datos del juego...');
+                
                 // Cargar participantes
                 const { data: participantsData, error: participantsError } = await supabase
                     .from('participants')
                     .select('*')
                     .order('created_at', { ascending: true });
 
-                if (participantsError) throw participantsError;
+                if (participantsError) {
+                    console.error('Error loading participants:', participantsError);
+                    throw participantsError;
+                }
                 participants = participantsData || [];
+                console.log('Participantes cargados:', participants.length);
 
                 // Cargar configuración del juego
                 const { data: settingsData, error: settingsError } = await supabase
                     .from('game_settings')
                     .select('*')
+                    .eq('id', 1)
                     .single();
 
-                if (!settingsError && settingsData) {
+                if (settingsError) {
+                    if (settingsError.code === 'PGRST116') {
+                        // No hay configuración, usar defaults
+                        console.log('No se encontró configuración, usando defaults');
+                        gameSettings = { game_state: 'registration', admin_code: null };
+                        gameState = 'registration';
+                    } else {
+                        console.error('Error loading settings:', settingsError);
+                        throw settingsError;
+                    }
+                } else if (settingsData) {
                     gameSettings = settingsData;
                     gameState = settingsData.game_state || 'registration';
-                } else {
-                    gameSettings = { game_state: 'registration', admin_code: '' };
+                    console.log('Configuración cargada:', gameState);
                 }
 
                 // Cargar resultados si existen
@@ -592,13 +668,17 @@
                         .from('draw_results')
                         .select('*');
 
-                    if (!resultsError && resultsData) {
+                    if (resultsError) {
+                        console.error('Error loading results:', resultsError);
+                        // No lanzar error, solo continuar sin resultados
+                    } else if (resultsData) {
                         drawResults = resultsData;
+                        console.log('Resultados cargados:', drawResults.length);
                     }
                 }
             } catch (error) {
-                console.error('Error loading game data:', error);
-                showMessage('Error cargando datos del juego', 'error');
+                console.error('Error in loadGameData:', error);
+                throw error;
             }
         }
 
@@ -607,6 +687,8 @@
         }
 
         function startRealtimeSubscription() {
+            console.log('Iniciando suscripciones en tiempo real...');
+            
             // Suscribirse a cambios en participantes
             supabase
                 .channel('participants_changes')
@@ -615,10 +697,13 @@
                     schema: 'public', 
                     table: 'participants' 
                 }, async (payload) => {
+                    console.log('Cambio en participantes:', payload);
                     await loadGameData();
                     updateUI();
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Estado suscripción participantes:', status);
+                });
 
             // Suscribirse a cambios en configuración del juego
             supabase
@@ -628,10 +713,13 @@
                     schema: 'public', 
                     table: 'game_settings' 
                 }, async (payload) => {
+                    console.log('Cambio en configuración:', payload);
                     await loadGameData();
                     updateUI();
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Estado suscripción configuración:', status);
+                });
 
             // Suscribirse a cambios en resultados
             supabase
@@ -641,11 +729,14 @@
                     schema: 'public', 
                     table: 'draw_results' 
                 }, async (payload) => {
+                    console.log('Cambio en resultados:', payload);
                     await loadGameData();
                     updateUI();
                     showMessage('¡Sorteo realizado! Revisa tu resultado.', 'success');
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Estado suscripción resultados:', status);
+                });
         }
 
         function updateUI() {
@@ -778,243 +869,4 @@
             if (gameSettings.admin_code && !isAdminLoggedIn) {
                 document.getElementById('admin-setup').style.display = 'none';
                 document.getElementById('admin-login').style.display = 'block';
-                document.getElementById('admin-controls').style.display = 'none';
-            } else if (!gameSettings.admin_code) {
-                document.getElementById('admin-setup').style.display = 'block';
-                document.getElementById('admin-login').style.display = 'none';
-                document.getElementById('admin-controls').style.display = 'none';
-            } else if (isAdminLoggedIn) {
-                document.getElementById('admin-setup').style.display = 'none';
-                document.getElementById('admin-login').style.display = 'none';
-                document.getElementById('admin-controls').style.display = 'block';
-                
-                if (participants.length >= 3) {
-                    drawBtn.disabled = gameState === 'drawn';
-                    drawBtn.textContent = gameState === 'drawn' ? '✅ Sorteo Realizado' : '🎲 Realizar Sorteo';
-                } else {
-                    drawBtn.disabled = true;
-                    drawBtn.textContent = `🎲 Se necesitan al menos 3 participantes (${participants.length}/3)`;
-                }
-
-                if (gameState === 'drawn') {
-                    showAdminResults();
-                }
-            }
-        }
-
-        async function setAdminCode() {
-            const code = document.getElementById('admin-code').value.trim();
-            if (!code) {
-                showMessage('Por favor ingresa un código.', 'error');
-                return;
-            }
-
-            try {
-                const { error } = await supabase
-                    .from('game_settings')
-                    .upsert([
-                        { 
-                            id: 1,
-                            admin_code: code,
-                            game_state: gameState 
-                        }
-                    ]);
-
-                if (error) throw error;
-
-                gameSettings.admin_code = code;
-                isAdminLoggedIn = true;
-                updateAdminSection();
-                showMessage('Código de administrador establecido.', 'success');
-            } catch (error) {
-                console.error('Error setting admin code:', error);
-                showMessage('Error al establecer código.', 'error');
-            }
-        }
-
-        function loginAdmin() {
-            const code = document.getElementById('admin-login-code').value.trim();
-            if (code === gameSettings.admin_code) {
-                isAdminLoggedIn = true;
-                updateAdminSection();
-                showMessage('Acceso de administrador concedido.', 'success');
-            } else {
-                showMessage('Código incorrecto.', 'error');
-            }
-        }
-
-        async function performDraw() {
-            if (!isAdminLoggedIn) {
-                showMessage('Acceso denegado.', 'error');
-                return;
-            }
-
-            if (participants.length < 3) {
-                showMessage('Se necesitan al menos 3 participantes para realizar el sorteo.', 'error');
-                return;
-            }
-
-            if (gameState === 'drawn') {
-                showMessage('El sorteo ya fue realizado.', 'error');
-                return;
-            }
-
-            try {
-                // Algoritmo de sorteo
-                const shuffled = [...participants];
-                let attempts = 0;
-                let validDraw = false;
-
-                while (!validDraw && attempts < 1000) {
-                    for (let i = shuffled.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-                    }
-
-                    validDraw = true;
-                    for (let i = 0; i < participants.length; i++) {
-                        if (participants[i].id === shuffled[i].id) {
-                            validDraw = false;
-                            break;
-                        }
-                    }
-                    attempts++;
-                }
-
-                if (!validDraw) {
-                    showMessage('Error al realizar el sorteo. Por favor, inténtalo de nuevo.', 'error');
-                    return;
-                }
-
-                // Crear resultados
-                const results = participants.map((giver, index) => ({
-                    giver_name: giver.name,
-                    giver_email: giver.email,
-                    receiver_name: shuffled[index].name,
-                    receiver_city: shuffled[index].city
-                }));
-
-                // Guardar en Supabase
-                const { error: resultsError } = await supabase
-                    .from('draw_results')
-                    .insert(results);
-
-                if (resultsError) throw resultsError;
-
-                // Actualizar estado del juego
-                const { error: settingsError } = await supabase
-                    .from('game_settings')
-                    .upsert([
-                        { 
-                            id: 1,
-                            admin_code: gameSettings.admin_code,
-                            game_state: 'drawn'
-                        }
-                    ]);
-
-                if (settingsError) throw settingsError;
-
-                gameState = 'drawn';
-                drawResults = results;
-                
-                showMessage('¡Sorteo realizado exitosamente!', 'success');
-                updateUI();
-
-            } catch (error) {
-                console.error('Error performing draw:', error);
-                showMessage('Error al realizar el sorteo. Intenta de nuevo.', 'error');
-            }
-        }
-
-        function showAdminResults() {
-            if (!isAdminLoggedIn) return;
-
-            const container = document.getElementById('admin-results-container');
-            container.innerHTML = drawResults.map(result => `
-                <div class="result-item">
-                    <div class="gift-pair">
-                        <span class="giver">${result.giver_name}</span> 
-                        → regala a → 
-                        <span class="receiver">${result.receiver_name}</span>
-                        <div style="font-size: 0.9em; margin-top: 5px; color: #666;">
-                            📧 ${result.giver_email} | 📍 ${result.receiver_city}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            document.getElementById('admin-results').style.display = 'block';
-        }
-
-        async function resetGame() {
-            if (!isAdminLoggedIn) {
-                showMessage('Acceso denegado.', 'error');
-                return;
-            }
-
-            if (!confirm('¿Estás seguro de que quieres reiniciar todo el juego? Se eliminarán todos los participantes y resultados.')) {
-                return;
-            }
-
-            try {
-                // Eliminar participantes
-                const { error: participantsError } = await supabase
-                    .from('participants')
-                    .delete()
-                    .neq('id', 0); // Eliminar todos
-
-                if (participantsError) throw participantsError;
-
-                // Eliminar resultados
-                const { error: resultsError } = await supabase
-                    .from('draw_results')
-                    .delete()
-                    .neq('id', 0); // Eliminar todos
-
-                if (resultsError) throw resultsError;
-
-                // Reiniciar configuración
-                const { error: settingsError } = await supabase
-                    .from('game_settings')
-                    .delete()
-                    .neq('id', 0); // Eliminar todos
-
-                if (settingsError) throw settingsError;
-
-                // Reiniciar variables locales
-                participants = [];
-                drawResults = [];
-                gameState = 'registration';
-                gameSettings = {};
-                isAdminLoggedIn = false;
-
-                // Ocultar secciones
-                document.getElementById('admin-results').style.display = 'none';
-                document.getElementById('my-result-section').style.display = 'none';
-                
-                updateUI();
-                showMessage('Juego reiniciado exitosamente.', 'success');
-
-            } catch (error) {
-                console.error('Error resetting game:', error);
-                showMessage('Error al reiniciar el juego.', 'error');
-            }
-        }
-
-        function showMessage(message, type) {
-            const container = document.getElementById('status-messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = type;
-            messageDiv.textContent = message;
-            
-            container.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.remove();
-                }
-            }, 5000);
-        }
-    </script>
-</body>
-</html>
+                document.getElementById('admin-controls').style.display
