@@ -157,42 +157,6 @@
             display: block;
         }
 
-        .participants-list {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-
-        .participant-item {
-            background: white;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            animation: slideIn 0.3s ease-in;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .participant-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .participant-name {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .participant-city {
-            color: #888;
-            font-size: 0.9em;
-        }
-
         .results {
             background: #e8f5e8;
             border-radius: 10px;
@@ -376,6 +340,16 @@
             line-height: 1.4;
         }
 
+        .participant-count {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            color: #333;
+        }
+
         @media (max-width: 600px) {
             .container {
                 margin: 10px;
@@ -550,12 +524,9 @@
                         </div>
                     </div>
 
-                    <!-- Lista de participantes -->
-                    <div class="participants-list">
-                        <h3>👥 Participantes Registrados (<span id="participant-count">0</span>):</h3>
-                        <div id="participants-container">
-                            <div class="loading">Cargando participantes</div>
-                        </div>
+                    <!-- Solo mostrar contador de participantes -->
+                    <div class="participant-count">
+                        👥 Participantes registrados: <span id="participant-count">0</span>
                     </div>
                 </div>
 
@@ -957,44 +928,16 @@
 
         function updateUI() {
             debugLog('Actualizando UI con', participants.length, 'participantes');
-            updateParticipantsList();
+            updateParticipantCount();
             updateGameStatus();
             updateAdminSection();
             updateDebugInfo();
         }
 
-        function updateParticipantsList() {
-            const container = document.getElementById('participants-container');
+        function updateParticipantCount() {
             const count = document.getElementById('participant-count');
-            
             count.textContent = participants.length;
-            debugLog('Actualizando lista de participantes:', participants.length);
-
-            if (participants.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">Aún no hay participantes registrados.</p>';
-                return;
-            }
-
-            container.innerHTML = participants.map(participant => `
-                <div class="participant-item">
-                    <div class="participant-info">
-                        <div class="participant-name">${escapeHtml(participant.name)}</div>
-                        <div class="participant-city">📍 ${escapeHtml(participant.city)}</div>
-                        <div style="font-size: 0.8em; color: #999; margin-top: 5px;">
-                            ID: ${participant.id} | ${participant.email}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function escapeHtml(unsafe) {
-            return unsafe
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            debugLog('Actualizando contador de participantes:', participants.length);
         }
 
         function updateGameStatus() {
@@ -1158,6 +1101,15 @@
             `).join('');
 
             document.getElementById('admin-results').style.display = 'block';
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         async function resetGame() {
