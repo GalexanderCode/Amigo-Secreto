@@ -266,6 +266,16 @@
             margin: 15px 0;
         }
 
+        .debug {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
         .game-status {
             text-align: center;
             padding: 20px;
@@ -475,10 +485,19 @@
 
             <!-- Aplicación principal -->
             <div id="main-app" style="display: none;">
+                <!-- Debug section -->
+                <div id="debug-section" class="debug" style="display: none;">
+                    <strong>🔧 Debug Info:</strong>
+                    <div id="debug-info"></div>
+                    <button class="btn btn-secondary" onclick="toggleDebug()">Ocultar Debug</button>
+                    <button class="btn btn-secondary" onclick="forceReload()">🔄 Forzar Recarga</button>
+                </div>
+
                 <!-- Tabs de navegación -->
                 <div class="tabs">
                     <button class="tab active" onclick="showTab('participant')">👤 Participante</button>
                     <button class="tab" onclick="showTab('admin')">⚙️ Administrador</button>
+                    <button class="tab" onclick="showTab('debug')">🔧 Debug</button>
                 </div>
 
                 <!-- Tab de Participante -->
@@ -566,6 +585,18 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Tab de Debug -->
+                <div id="debug-tab" class="tab-content">
+                    <div class="admin-section">
+                        <h3>🔧 Información de Debug</h3>
+                        <div id="detailed-debug-info"></div>
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="forceReload()">🔄 Forzar Recarga Datos</button>
+                            <button class="btn btn-secondary" onclick="testConnection()">🔗 Probar Conexión</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Mensajes de estado -->
@@ -582,19 +613,61 @@
         let drawResults = [];
         let gameState = 'registration';
         let supabaseConfigured = false;
-        let realtimeSubscription = null;
+        let realtimeSubscriptions = [];
+        let debugMode = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             checkSupabaseConfig();
         });
+
+        function debugLog(message, data = null) {
+            console.log('🔧 [DEBUG]', message, data);
+            if (debugMode) {
+                updateDebugInfo();
+            }
+        }
+
+        function updateDebugInfo() {
+            const debugInfo = document.getElementById('debug-info');
+            const detailedDebugInfo = document.getElementById('detailed-debug-info');
+            
+            const info = `
+                <div><strong>Participantes en memoria:</strong> ${participants.length}</div>
+                <div><strong>Estado del juego:</strong> ${gameState}</div>
+                <div><strong>Resultados:</strong> ${drawResults.length}</div>
+                <div><strong>Supabase conectado:</strong> ${supabaseConfigured ? '✅' : '❌'}</div>
+                <div><strong>Subscripciones activas:</strong> ${realtimeSubscriptions.length}</div>
+            `;
+            
+            if (debugInfo) debugInfo.innerHTML = info;
+            if (detailedDebugInfo) {
+                detailedDebugInfo.innerHTML = info + `
+                    <div style="margin-top: 15px;"><strong>Participantes:</strong></div>
+                    <pre style="background: #f0f0f0; padding: 10px; border-radius: 5px; margin-top: 5px;">${JSON.stringify(participants, null, 2)}</pre>
+                `;
+            }
+        }
+
+        function toggleDebug() {
+            debugMode = !debugMode;
+            const debugSection = document.getElementById('debug-section');
+            if (debugMode) {
+                debugSection.style.display = 'block';
+                updateDebugInfo();
+            } else {
+                debugSection.style.display = 'none';
+            }
+        }
 
         function checkSupabaseConfig() {
             const savedConfig = localStorage.getItem('supabaseConfigured');
             if (savedConfig) {
                 try {
                     const config = JSON.parse(savedConfig);
+                    debugLog('Configuración encontrada en localStorage');
                     initializeSupabase(config.url, config.key);
                 } catch (e) {
+                    debugLog('Error cargando configuración de Supabase:', e);
                     console.error('Error loading Supabase config:', e);
                 }
             }
@@ -628,16 +701,19 @@
                 showMessage('¡Supabase configurado exitosamente!', 'success');
             } catch (e) {
                 showMessage('Error en la configuración: ' + e.message, 'error');
+                debugLog('Error en setupSupabase:', e);
             }
         }
 
         async function initializeSupabase(url, key) {
             try {
+                debugLog('Inicializando Supabase con URL:', url);
                 supabase = window.supabase.createClient(url, key);
                 supabaseConfigured = true;
                 
-                // Crear tablas si no existen
-                await createTablesIfNotExist();
+                // Probar conexión antes de continuar
+                debugLog('Probando conexión...');
+                await testConnection();
                 
                 document.getElementById('supabase-setup').style.display = 'none';
                 document.getElementById('detailed-instructions').style.display = 'none';
@@ -647,87 +723,168 @@
                 await loadInitialData();
                 startRealtimeListeners();
                 
+                debugLog('Supabase inicializado correctamente');
+                
             } catch (e) {
                 showMessage('Error conectando con Supabase: ' + e.message, 'error');
+                debugLog('Error en initializeSupabase:', e);
                 console.error('Supabase initialization error:', e);
             }
         }
 
-        async function createTablesIfNotExist() {
+        async function testConnection() {
             try {
-                // Intentar crear tabla de participantes
-                await supabase.rpc('create_participants_table', {});
+                debugLog('Probando conexión a Supabase...');
+                
+                // Intentar hacer una consulta simple
+                const { data, error, count } = await supabase
+                    .from('participants')
+                    .select('*', { count: 'exact', head: true });
+
+                if (error) {
+                    debugLog('Error en conexión:', error);
+                    if (error.code === '42P01') {
+                        debugLog('Tabla participants no existe, se creará automáticamente');
+                        return true; // Esto es normal la primera vez
+                    }
+                    throw error;
+                }
+
+                debugLog('Conexión exitosa. Registros existentes:', count);
+                showMessage('✅ Conexión a Supabase exitosa', 'success');
+                return true;
+                
             } catch (e) {
-                // Las tablas se crearán automáticamente al hacer el primer insert
-                console.log('Tables will be created automatically');
+                debugLog('Error probando conexión:', e);
+                showMessage('❌ Error de conexión: ' + e.message, 'error');
+                throw e;
             }
         }
 
         function setupEventListeners() {
             document.getElementById('participant-form').addEventListener('submit', handleFormSubmit);
+            debugLog('Event listeners configurados');
         }
 
         async function loadInitialData() {
             try {
-                // Cargar participantes
-                const { data: participantsData, error: participantsError } = await supabase
-                    .from('participants')
-                    .select('*')
-                    .order('created_at', { ascending: true });
+                debugLog('Cargando datos iniciales...');
+                
+                // Cargar participantes con mejor manejo de errores
+                let participantsData = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('participants')
+                        .select('*')
+                        .order('created_at', { ascending: true });
 
-                if (participantsError && participantsError.code !== 'PGRST116') {
-                    throw participantsError;
+                    if (error) {
+                        if (error.code === '42P01') {
+                            debugLog('Tabla participants no existe aún - primera vez');
+                            participantsData = [];
+                        } else {
+                            throw error;
+                        }
+                    } else {
+                        participantsData = data || [];
+                        debugLog('Participantes cargados desde DB:', participantsData.length);
+                    }
+                } catch (e) {
+                    debugLog('Error cargando participantes:', e);
+                    participantsData = [];
                 }
 
-                participants = participantsData || [];
+                participants = participantsData;
 
                 // Cargar estado del juego
-                const { data: gameData, error: gameError } = await supabase
-                    .from('game_state')
-                    .select('*')
-                    .eq('id', 'current')
-                    .single();
+                let gameData = null;
+                try {
+                    const { data, error } = await supabase
+                        .from('game_state')
+                        .select('*')
+                        .eq('id', 'current')
+                        .maybeSingle(); // Usar maybeSingle en lugar de single
 
-                if (gameError && gameError.code !== 'PGRST116') {
-                    if (gameError.code !== 'PGRST204') { // Not found is OK
-                        throw gameError;
+                    if (error) {
+                        if (error.code === '42P01' || error.code === 'PGRST116') {
+                            debugLog('Tabla game_state no existe aún o no hay datos');
+                        } else {
+                            throw error;
+                        }
+                    } else {
+                        gameData = data;
+                        debugLog('Estado del juego cargado:', gameData);
                     }
+                } catch (e) {
+                    debugLog('Error cargando estado del juego:', e);
                 }
 
                 if (gameData) {
                     gameState = gameData.state || 'registration';
                     drawResults = gameData.results || [];
+                } else {
+                    gameState = 'registration';
+                    drawResults = [];
                 }
 
+                debugLog('Datos cargados - Participantes:', participants.length, 'Estado:', gameState);
                 updateUI();
+                
             } catch (e) {
+                debugLog('Error general en loadInitialData:', e);
                 console.error('Error loading initial data:', e);
-                updateUI(); // Show UI even if there's an error
+                // Mostrar UI incluso si hay error
+                updateUI(); 
             }
         }
 
         function startRealtimeListeners() {
-            // Escuchar cambios en participantes
-            supabase
-                .channel('participants')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'participants' },
-                    (payload) => {
-                        loadInitialData(); // Reload data when changes occur
+            try {
+                debugLog('Iniciando listeners en tiempo real...');
+                
+                // Limpiar subscripciones previas
+                realtimeSubscriptions.forEach(sub => {
+                    if (sub && typeof sub.unsubscribe === 'function') {
+                        sub.unsubscribe();
                     }
-                )
-                .subscribe();
+                });
+                realtimeSubscriptions = [];
 
-            // Escuchar cambios en estado del juego
-            supabase
-                .channel('game_state')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'game_state' },
-                    (payload) => {
-                        loadInitialData();
-                    }
-                )
-                .subscribe();
+                // Escuchar cambios en participantes
+                const participantsChannel = supabase
+                    .channel('participants_changes')
+                    .on('postgres_changes', 
+                        { event: '*', schema: 'public', table: 'participants' },
+                        (payload) => {
+                            debugLog('Cambio detectado en participants:', payload);
+                            setTimeout(() => loadInitialData(), 500); // Pequeño delay para asegurar consistencia
+                        }
+                    )
+                    .subscribe((status) => {
+                        debugLog('Subscription status para participants:', status);
+                    });
+
+                // Escuchar cambios en estado del juego
+                const gameStateChannel = supabase
+                    .channel('gamestate_changes')
+                    .on('postgres_changes', 
+                        { event: '*', schema: 'public', table: 'game_state' },
+                        (payload) => {
+                            debugLog('Cambio detectado en game_state:', payload);
+                            setTimeout(() => loadInitialData(), 500);
+                        }
+                    )
+                    .subscribe((status) => {
+                        debugLog('Subscription status para game_state:', status);
+                    });
+
+                realtimeSubscriptions = [participantsChannel, gameStateChannel];
+                debugLog('Listeners configurados:', realtimeSubscriptions.length);
+                
+            } catch (e) {
+                debugLog('Error configurando realtime listeners:', e);
+                console.error('Error setting up realtime listeners:', e);
+            }
         }
 
         async function handleFormSubmit(e) {
@@ -748,12 +905,18 @@
             }
 
             try {
+                debugLog('Intentando agregar participante:', { name, email, city });
+                
                 // Verificar si el email ya existe
                 const { data: existing, error: checkError } = await supabase
                     .from('participants')
                     .select('id')
                     .eq('email', email.toLowerCase())
-                    .single();
+                    .maybeSingle();
+
+                if (checkError && checkError.code !== 'PGRST116' && checkError.code !== '42P01') {
+                    throw checkError;
+                }
 
                 if (existing) {
                     showMessage('Este correo electrónico ya está registrado.', 'error');
@@ -766,25 +929,38 @@
                     .insert([{
                         name: name,
                         email: email.toLowerCase(),
-                        city: city
-                    }]);
+                        city: city,
+                        created_at: new Date().toISOString()
+                    }])
+                    .select();
 
-                if (error) throw error;
+                if (error) {
+                    debugLog('Error insertando participante:', error);
+                    throw error;
+                }
+
+                debugLog('Participante agregado exitosamente:', data);
 
                 // Limpiar formulario
                 document.getElementById('participant-form').reset();
                 showMessage(`¡${name} se ha unido al intercambio exitosamente!`, 'success');
 
+                // Forzar recarga de datos
+                await loadInitialData();
+
             } catch (error) {
+                debugLog('Error en handleFormSubmit:', error);
                 showMessage('Error al registrar participante: ' + error.message, 'error');
                 console.error('Error adding participant:', error);
             }
         }
 
         function updateUI() {
+            debugLog('Actualizando UI con', participants.length, 'participantes');
             updateParticipantsList();
             updateGameStatus();
             updateAdminSection();
+            updateDebugInfo();
         }
 
         function updateParticipantsList() {
@@ -792,6 +968,7 @@
             const count = document.getElementById('participant-count');
             
             count.textContent = participants.length;
+            debugLog('Actualizando lista de participantes:', participants.length);
 
             if (participants.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666;">Aún no hay participantes registrados.</p>';
@@ -801,11 +978,23 @@
             container.innerHTML = participants.map(participant => `
                 <div class="participant-item">
                     <div class="participant-info">
-                        <div class="participant-name">${participant.name}</div>
-                        <div class="participant-city">📍 ${participant.city}</div>
+                        <div class="participant-name">${escapeHtml(participant.name)}</div>
+                        <div class="participant-city">📍 ${escapeHtml(participant.city)}</div>
+                        <div style="font-size: 0.8em; color: #999; margin-top: 5px;">
+                            ID: ${participant.id} | ${participant.email}
+                        </div>
                     </div>
                 </div>
             `).join('');
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         function updateGameStatus() {
@@ -878,17 +1067,21 @@
             }
 
             try {
-                // Algoritmo de sorteo
+                debugLog('Iniciando sorteo con participantes:', participants);
+                
+                // Algoritmo de sorteo mejorado
                 const shuffled = [...participants];
                 let attempts = 0;
                 let validDraw = false;
 
                 while (!validDraw && attempts < 1000) {
+                    // Fisher-Yates shuffle
                     for (let i = shuffled.length - 1; i > 0; i--) {
                         const j = Math.floor(Math.random() * (i + 1));
                         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
                     }
 
+                    // Verificar que nadie se regale a sí mismo
                     validDraw = true;
                     for (let i = 0; i < participants.length; i++) {
                         if (participants[i].id === shuffled[i].id) {
@@ -900,7 +1093,7 @@
                 }
 
                 if (!validDraw) {
-                    showMessage('Error al realizar el sorteo. Por favor, inténtalo de nuevo.', 'error');
+                    showMessage('Error al realizar el sorteo después de 1000 intentos. Por favor, inténtalo de nuevo.', 'error');
                     return;
                 }
 
@@ -909,8 +1102,11 @@
                     giver: giver.name,
                     giverEmail: giver.email,
                     receiver: shuffled[index].name,
-                    receiverCity: shuffled[index].city
+                    receiverCity: shuffled[index].city,
+                    receiverEmail: shuffled[index].email
                 }));
+
+                debugLog('Resultados del sorteo:', results);
 
                 // Guardar en Supabase
                 const { data, error } = await supabase
@@ -918,11 +1114,21 @@
                     .upsert([{
                         id: 'current',
                         state: 'drawn',
-                        results: results
-                    }]);
+                        results: results,
+                        updated_at: new Date().toISOString()
+                    }], {
+                        onConflict: 'id'
+                    })
+                    .select();
 
-                if (error) throw error;
+                if (error) {
+                    debugLog('Error guardando estado del juego:', error);
+                    throw error;
+                }
 
+                debugLog('Estado del juego guardado:', data);
+
+                // Actualizar estado local
                 gameState = 'drawn';
                 drawResults = results;
                 updateUI();
@@ -930,6 +1136,7 @@
                 showMessage('¡Sorteo realizado exitosamente!', 'success');
 
             } catch (error) {
+                debugLog('Error en performDraw:', error);
                 showMessage('Error al realizar el sorteo: ' + error.message, 'error');
                 console.error('Error performing draw:', error);
             }
@@ -940,11 +1147,11 @@
             container.innerHTML = results.map(result => `
                 <div class="result-item">
                     <div class="gift-pair">
-                        <span class="giver">${result.giver}</span> 
+                        <span class="giver">${escapeHtml(result.giver)}</span> 
                         → regala a → 
-                        <span class="receiver">${result.receiver}</span>
+                        <span class="receiver">${escapeHtml(result.receiver)}</span>
                         <div style="font-size: 0.9em; margin-top: 5px; color: #666;">
-                            📧 ${result.giverEmail} | 📍 ${result.receiverCity}
+                            📧 ${result.giverEmail} | 📍 ${escapeHtml(result.receiverCity)}
                         </div>
                     </div>
                 </div>
@@ -959,13 +1166,18 @@
             }
 
             try {
+                debugLog('Iniciando reset del juego...');
+                
                 // Eliminar todos los participantes
                 const { error: deleteParticipantsError } = await supabase
                     .from('participants')
                     .delete()
-                    .neq('id', 0); // Delete all (neq 0 means not equal to 0, so all records)
+                    .gte('id', 0); // Eliminar todos los registros
 
-                if (deleteParticipantsError) throw deleteParticipantsError;
+                if (deleteParticipantsError) {
+                    debugLog('Error eliminando participantes:', deleteParticipantsError);
+                    throw deleteParticipantsError;
+                }
 
                 // Eliminar estado del juego
                 const { error: deleteGameError } = await supabase
@@ -973,12 +1185,17 @@
                     .delete()
                     .eq('id', 'current');
 
-                if (deleteGameError) throw deleteGameError;
+                if (deleteGameError) {
+                    debugLog('Error eliminando estado del juego:', deleteGameError);
+                    throw deleteGameError;
+                }
 
-                // Reset local state
+                // Reset estado local
                 participants = [];
                 drawResults = [];
                 gameState = 'registration';
+                
+                debugLog('Juego reiniciado correctamente');
                 
                 updateUI();
                 document.getElementById('admin-results').style.display = 'none';
@@ -986,6 +1203,7 @@
                 showMessage('Juego reiniciado exitosamente.', 'success');
 
             } catch (error) {
+                debugLog('Error en resetGame:', error);
                 showMessage('Error al reiniciar el juego: ' + error.message, 'error');
                 console.error('Error resetting game:', error);
             }
@@ -1003,6 +1221,24 @@
             // Mostrar tab seleccionado
             document.getElementById(tabName + '-tab').classList.add('active');
             document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+            
+            // Activar debug mode si se selecciona el tab debug
+            if (tabName === 'debug') {
+                debugMode = true;
+                updateDebugInfo();
+            }
+        }
+
+        async function forceReload() {
+            showMessage('🔄 Recargando datos...', 'info');
+            debugLog('Forzando recarga de datos...');
+            try {
+                await loadInitialData();
+                showMessage('✅ Datos recargados exitosamente', 'success');
+            } catch (e) {
+                showMessage('❌ Error recargando datos: ' + e.message, 'error');
+                debugLog('Error en forceReload:', e);
+            }
         }
 
         function showMessage(message, type) {
@@ -1013,11 +1249,14 @@
             
             container.appendChild(messageDiv);
             
+            // Auto-remover después de 5 segundos
             setTimeout(() => {
                 if (messageDiv.parentNode) {
                     messageDiv.remove();
                 }
             }, 5000);
+            
+            debugLog('Mensaje mostrado:', { message, type });
         }
     </script>
 </body>
